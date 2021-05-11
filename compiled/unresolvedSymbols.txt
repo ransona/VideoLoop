@@ -1,0 +1,8 @@
+Path	Symbol	Reason
+toolbox\matlab\hardware\supportpackages\arduinoio\+arduinoio\+internal\getDocMap.m	matlabshared.supportpkg.getSupportPackageRoot	undeployable
+toolbox\matlab\hardware\supportpackages\arduinoio\+matlab\+addons\+internal\arduinoPackageInfo.m	matlabshared.supportpkg.getSupportPackageRoot	undeployable
+toolbox\matlab\hardware\supportpackages\arduinoio\+matlabshared\+supportpkg\+internal\+sppkglegacy\ArduinoIO.m	matlabshared.supportpkg.internal.sppkglegacy.SupportPackageRegistryPluginBase	undeployable
+toolbox\matlab\hardware\supportpackages\arduinoio\arduinoSupport.m	matlabshared.supportpkg.getSupportPackageRoot	undeployable
+toolbox\matlab\hardware\supportpackages\sharedarduino\+arduinoio\preUninstall.m	matlabshared.supportpkg.getInstalled	undeployable
+toolbox\matlab\hardware\supportpackages\sharedarduino\+arduinoio\preUninstall.m	matlabshared.supportpkg.getSupportPackageRoot	undeployable
+toolbox\matlab\webcam\supportpackages\+matlabshared\+supportpkg\+internal\+sppkglegacy\USBWebcams.m	matlabshared.supportpkg.internal.sppkglegacy.SupportPackageRegistryPluginBase	undeployable
