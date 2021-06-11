@@ -1,0 +1,590 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>videoLoop</title><meta name="generator" content="MATLAB 9.10"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2021-06-03"><meta name="DC.source" content="videoLoop.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#3">do stuff relate3d to writing video to disk</a></li><li><a href="#4">check if abort acquisition has been requested</a></li><li><a href="#5">check if acquiring</a></li></ul></div><pre class="codeinput"><span class="keyword">function</span> videoLoop()
+<span class="keyword">global</span> listenerStatus;
+<span class="keyword">global</span> eTrackGlobal;
+
+listOfTimers = timerfindall;
+<span class="keyword">if</span> ~isempty(listOfTimers)
+delete(listOfTimers(:));
+<span class="keyword">end</span>
+clear <span class="string">all</span>
+
+<span class="keyword">global</span> listenerStatus;
+<span class="keyword">global</span> eTrackGlobal;
+
+
+<span class="comment">% initial setup</span>
+eTrackGlobal.tic = tic;
+eTrackGlobal.camsTriggered  = false;
+
+allcams = webcamlist;
+disp(<span class="string">'Starting cameras...'</span>)
+<span class="comment">% setup eye track camera 1</span>
+eTrackGlobal.cam1 = webcam(1);
+<span class="comment">% setup eye track camera2</span>
+eTrackGlobal.cam2 = webcam(2);
+<span class="comment">% setup behavioural camera</span>
+eTrackGlobal.cam3 = webcam(3);
+
+<span class="comment">% setup arduino</span>
+disp(<span class="string">'Starting arduino...'</span>)
+eTrackGlobal.arduino = arduino(<span class="string">'COM4'</span>);
+
+<span class="comment">% setup UDP listener</span>
+disp(<span class="string">'Starting UDP listener...'</span>)
+listenerStatus.udpSI = UDPqML(<span class="string">'10.40.6.198'</span>,1814,1813);
+listenerStatus.status = <span class="string">'idle'</span>;
+listenerStatus.udpCheckTimer = timer(<span class="string">'StartDelay'</span>,0,<span class="string">'Period'</span>,1,<span class="string">'BusyMode'</span>,<span class="string">'drop'</span>,<span class="string">'TimerFcn'</span>,@UDP_handler1,<span class="string">'ExecutionMode'</span>,<span class="string">'fixedRate'</span>);
+start(listenerStatus.udpCheckTimer);
+
+<span class="comment">% figure window for display</span>
+fig = figure(<span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="string">'Position'</span>,[0.33 0.05 0.33 0.9],<span class="string">'Name'</span>,<span class="string">'Video acquisition'</span>,<span class="string">'NumberTitle'</span>,<span class="string">'off'</span>);
+set(fig, <span class="string">'MenuBar'</span>, <span class="string">'none'</span>);
+set(fig, <span class="string">'ToolBar'</span>, <span class="string">'none'</span>);
+listenerStatus.status = <span class="string">'idle'</span>;
+
+<span class="comment">% testing:</span>
+<span class="comment">% t1 = timer('StartDelay',2,'Period',1,'BusyMode','drop','TimerFcn',@testVideo,'ExecutionMode','singleShot');</span>
+<span class="comment">% t2 = timer('StartDelay',12,'Period',1,'BusyMode','drop','TimerFcn',@testVideo,'ExecutionMode','singleShot');</span>
+<span class="comment">% start(t1);</span>
+<span class="comment">% start(t2);</span>
+
+<span class="comment">%setup images for video preview</span>
+
+a = tight_subplot(3,1,0.01);
+<span class="comment">%axis equal;</span>
+axis(a(1));
+eTrackGlobal.hImage1 = image(a(1),zeros(size(snapshot(eTrackGlobal.cam1))));
+axis(a(2));
+<span class="comment">%axis equal;</span>
+eTrackGlobal.hImage2 = image(a(2),zeros(size(snapshot(eTrackGlobal.cam2))));
+axis(a(3));
+<span class="comment">%axis equal;</span>
+eTrackGlobal.hImage3 = image(a(3),zeros(size(snapshot(eTrackGlobal.cam3))));
+
+eTrackGlobal.cam1.preview(eTrackGlobal.hImage1);
+eTrackGlobal.cam2.preview(eTrackGlobal.hImage2);
+eTrackGlobal.cam3.preview(eTrackGlobal.hImage3);
+
+set(groot,<span class="string">'CurrentFigure'</span>,fig);
+axes(a(1));
+statusText = text(20,20,<span class="string">'IDLE'</span>,<span class="string">'Color'</span>,<span class="string">'green'</span>,<span class="string">'FontSize'</span>,20);
+axes(a(1));
+statusText2 = text(20,80,<span class="string">''</span>,<span class="string">'Color'</span>,<span class="string">'yellow'</span>,<span class="string">'FontSize'</span>,20);
+
+<span class="keyword">while</span> true
+</pre><pre class="codeinput">    <span class="comment">% grab latest camera data</span>
+    data1 = snapshot(eTrackGlobal.cam1);
+    data2 = snapshot(eTrackGlobal.cam2);
+    data3 = snapshot(eTrackGlobal.cam3);
+    data1 = squeeze(data1(:,:,1));
+    data2 = squeeze(data2(:,:,1));
+    data3 = squeeze(data3(:,:,1));
+    <span class="comment">% concatinate</span>
+    xMax = max([size(data1,2),size(data2,2),size(data3,2)]);
+    yMax = max([size(data1,1),size(data2,1),size(data3,1)]);
+    <span class="comment">% pad each</span>
+    data1 = cat(2,data1,zeros([size(data1,1),xMax-size(data1,2)]));
+    data1 = cat(1,data1,zeros([yMax-size(data1,1),size(data1,2),]));
+    data2 = cat(2,data2,zeros([size(data2,1),xMax-size(data2,2)]));
+    data2 = cat(1,data2,zeros([yMax-size(data2,1),size(data2,2),]));
+    data3 = cat(2,data3,zeros([size(data3,1),xMax-size(data3,2)]));
+    data3 = cat(1,data3,zeros([yMax-size(data3,1),size(data3,2),]));
+    <span class="comment">% data 0 contains the final thing to be output</span>
+    data0 = cat(2,data1,data2,data3);
+    <span class="comment">% update display</span>
+    <span class="keyword">try</span>
+    set(groot,<span class="string">'CurrentFigure'</span>,fig);
+    <span class="keyword">catch</span>
+        <span class="keyword">break</span>
+    <span class="keyword">end</span>
+
+    <span class="keyword">if</span> strcmp(listenerStatus.status,<span class="string">'idle'</span>)
+        drawnow;
+    <span class="keyword">end</span>
+</pre><h2 id="3">do stuff relate3d to writing video to disk</h2><p>check if new acquistion has been requested check if a new recording session has been requested</p><pre class="codeinput">    <span class="keyword">if</span>  strcmp(listenerStatus.status,<span class="string">'start'</span>)
+
+        <span class="comment">% clear current eyetracking data</span>
+        disp(<span class="string">'Starting new eyetracking acquisition'</span>);
+<span class="comment">%         eTrackGlobal.data.frames{1} = zeros([size(data1),50000],'uint8');</span>
+<span class="comment">%         eTrackGlobal.data.frames{2} = zeros([size(data2),50000],'uint8');</span>
+<span class="comment">%         eTrackGlobal.data.frames{3} = zeros([size(data3),50000],'uint8');</span>
+
+<span class="comment">%         eTrackGlobal.cam1.closePreview;</span>
+<span class="comment">%         eTrackGlobal.cam2.closePreview;</span>
+<span class="comment">%         eTrackGlobal.cam3.closePreview;</span>
+
+        eTrackGlobal.writerObj{1} = VideoWriter(listenerStatus.filename1,<span class="string">'MPEG-4'</span>);
+        <span class="comment">%eTrackGlobal.writerObj{2} = VideoWriter(listenerStatus.filename2,'MPEG-4');</span>
+        <span class="comment">%eTrackGlobal.writerObj{3} = VideoWriter(listenerStatus.filename3,'MPEG-4');</span>
+
+        eTrackGlobal.data.frameTimes=[];
+        eTrackGlobal.data.frameCount = 0;
+        eTrackGlobal.data.startTime = toc(eTrackGlobal.tic);
+        eTrackGlobal.data.lastTrig = 1;
+        <span class="comment">%eTrackGlobal.arduino.digitalWrite(8,1);</span>
+        eTrackGlobal.arduino.writeDigitalPin(<span class="string">'D8'</span>,1);
+
+        open(eTrackGlobal.writerObj{1});
+        <span class="comment">%open(eTrackGlobal.writerObj{2});</span>
+        <span class="comment">%open(eTrackGlobal.writerObj{3});</span>
+
+        listenerStatus.status = <span class="string">'acquiring'</span>;
+        statusText2.String = strrep(listenerStatus.expID, <span class="string">'_'</span>, <span class="string">'\_'</span>);
+    <span class="keyword">end</span>
+</pre><h2 id="4">check if abort acquisition has been requested</h2><pre class="codeinput">    <span class="keyword">if</span>  strcmp(listenerStatus.status,<span class="string">'aborting'</span>)
+        statusText.String = <span class="string">'ABORTING'</span>;
+        statusText.Color = <span class="string">'red'</span>;
+        disp(<span class="string">'Stopping acquisition'</span>);
+        eTrackGlobal.data.lastTrig = 0;
+        eTrackGlobal.arduino.writeDigitalPin(<span class="string">'D8'</span>,0);
+        <span class="comment">% then close frames output writer</span>
+        <span class="comment">%eTrackGlobal.writerObj{1}.</span>
+        drawnow
+
+        eTrackGlobal.writerObj{1}.close;
+        <span class="comment">% save the rest of the meta data</span>
+        eTrackGlobal.data.frames = [];
+        statusText.String = <span class="string">'SAVING META DATA'</span>;
+        drawnow;
+        eTrackData = eTrackGlobal.data;
+        save(listenerStatus.filenameMeta1,<span class="string">'eTrackData'</span>);
+
+        <span class="comment">% sync to server</span>
+        <span class="comment">%remotePath = '\\ar-lab-nas1\dataserver\Remote_Repository';</span>
+        <span class="comment">%localPath = 'c:\local_repository\*.*';</span>
+        <span class="comment">%statusText.String = 'SYNCING TO SERVER';</span>
+        <span class="comment">%drawnow;</span>
+        <span class="comment">%tic</span>
+        <span class="comment">%copyfile(localPath,remotePath);</span>
+        <span class="comment">%disp(['Time to sync = ',num2str(toc)]);</span>
+        listenerStatus.status = <span class="string">'idle'</span>;
+        statusText.String = <span class="string">'IDLE'</span>;
+        statusText.Color = <span class="string">'green'</span>;
+
+        disp(<span class="string">'Data saved.'</span>);
+        <span class="comment">% figure;</span>
+        <span class="comment">% plot(diff(eTrackGlobal.data.frameTimes));</span>
+        disp([<span class="string">'Median frame rate = '</span>,num2str(1/median(diff(eTrackGlobal.data.frameTimes)))]);
+        <span class="comment">%stop(eTrackGlobal.timer);</span>
+    <span class="keyword">end</span>
+</pre><h2 id="5">check if acquiring</h2><pre class="codeinput">    <span class="keyword">if</span>  strcmp(listenerStatus.status,<span class="string">'acquiring'</span>)
+        statusText.String = <span class="string">'ACQUIRING'</span>;
+        statusText.Color = <span class="string">'red'</span>;
+        eTrackGlobal.data.frameCount = eTrackGlobal.data.frameCount + 1;
+        eTrackGlobal.data.frameTimes(eTrackGlobal.data.frameCount) = toc(eTrackGlobal.tic) - eTrackGlobal.data.startTime;
+
+        <span class="keyword">if</span> length(eTrackGlobal.data.frameTimes)&gt;1
+        <span class="keyword">if</span> eTrackGlobal.data.frameTimes(end)-eTrackGlobal.data.frameTimes(end-1)&lt;0
+            disp(<span class="string">'Err'</span>);
+        <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="comment">% if frame count is a multiple of 20 then output a timing pulse</span>
+        <span class="keyword">if</span> rem(eTrackGlobal.data.frameCount,100)==0
+
+            <span class="keyword">if</span> eTrackGlobal.data.lastTrig == 1
+                eTrackGlobal.data.lastTrig = 0;
+                eTrackGlobal.arduino.writeDigitalPin(<span class="string">'D8'</span>,0);
+            <span class="keyword">else</span>
+                eTrackGlobal.data.lastTrig = 1;
+                eTrackGlobal.arduino.writeDigitalPin(<span class="string">'D8'</span>,1);
+            <span class="keyword">end</span>
+
+        <span class="keyword">end</span>
+
+        <span class="comment">% write frame to disk</span>
+        writeVideo(eTrackGlobal.writerObj{1},data0);
+    <span class="keyword">end</span>
+</pre><pre class="codeinput"><span class="keyword">end</span>
+
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">Starting cameras...
+Starting arduino...
+Starting UDP listener...
+Starting UDP object
+Opening connection
+Warning: The following error was caught while executing 'onCleanup' class
+destructor:
+Error using matlab.ui.Figure/set
+Invalid or deleted object.
+
+Error in internal.matlab.publish.PublishFigures&gt;printSnap/restoreFigure (line
+260)
+        set(f,'PaperPosition',origPaperPosition);
+
+Error in
+internal.matlab.publish.PublishFigures&gt;@()restoreFigure(f,origPaperPosition,params,origValues)
+(line 258)
+resetFigureObj = onCleanup(@()restoreFigure(f, origPaperPosition, params,
+origValues));
+
+Error in onCleanup/delete (line 80)
+            obj.task();
+
+Error in internal.matlab.publish.PublishFigures&gt;printSnap (line 247)
+comment = getDebugCommentForImage(f);
+
+Error in internal.matlab.publish.PublishFigures.snapFigure (line 193)
+                    feval([method 'Snap'],f,imgFilename,imageFormat,opts);
+
+Error in internal.matlab.publish.PublishFigures/snap (line 64)
+                imgFilename =
+                obj.snapFigure(f,obj.options.filenameGenerator(),obj.options);
+
+Error in internal.matlab.publish.PublishFigures/leavingCell (line 113)
+                    imgFilename = snap(obj, f);
+
+Error in snapnow&gt;leavingCell (line 208)
+            newFiles = data.plugins(iPlugins).instance.leavingCell(iCell);
+
+Error in snapnow (line 144)
+                        data = leavingCell(iCell(k), data, doCapture(k));
+
+Error in videoLoop (line 109)
+    if  strcmp(listenerStatus.status,'start')
+
+Error in evalmxdom&gt;instrumentAndRun (line 109)
+text = evalc(evalstr);
+
+Error in evalmxdom (line 21)
+[data,text,laste] =
+instrumentAndRun(file,cellBoundaries,imageDir,imagePrefix,options);
+
+Error in publish
+
+Error in mdbpublish (line 54)
+outputPath = publish(file, options); 
+Error using internal.matlab.publish.PublishFigures&gt;printSnap (line 290)
+Unable to write to C:\Code\VideoLoop\html.
+FILEATTRIB output is
+
+  archive:0
+  system:0
+  hidden:0
+  directory:1
+  UserRead:1
+  UserWrite:1
+  UserExecute:1
+  GroupRead:NaN
+  GroupWrite:NaN
+  GroupExecute:NaN
+  OtherRead:NaN
+  OtherWrite:NaN
+  OtherExecute:NaN
+
+Error in internal.matlab.publish.PublishFigures.snapFigure (line 193)
+                    feval([method 'Snap'],f,imgFilename,imageFormat,opts);
+
+Error in internal.matlab.publish.PublishFigures/snap (line 64)
+                imgFilename = obj.snapFigure(f,obj.options.filenameGenerator(),obj.options);
+
+Error in internal.matlab.publish.PublishFigures/leavingCell (line 113)
+                    imgFilename = snap(obj, f);
+
+Error in snapnow&gt;leavingCell (line 208)
+            newFiles = data.plugins(iPlugins).instance.leavingCell(iCell);
+
+Error in snapnow (line 144)
+                        data = leavingCell(iCell(k), data, doCapture(k));
+
+Error in videoLoop (line 109)
+    if  strcmp(listenerStatus.status,'start')
+
+Error in evalmxdom&gt;instrumentAndRun (line 109)
+text = evalc(evalstr);
+
+Error in evalmxdom (line 21)
+[data,text,laste] = instrumentAndRun(file,cellBoundaries,imageDir,imagePrefix,options);
+
+Error in publish
+
+Error in mdbpublish (line 54)
+outputPath = publish(file, options);
+
+Caused by:
+    Error using adjustbackground
+    The state of HGUsingMATLABClasses for ADJUSTBACKGROUND 'restore' is not the same as when ADJUSTBACKGROUND 'save' was run; unable to continue.
+</pre><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2021a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+function videoLoop()
+global listenerStatus;
+global eTrackGlobal;
+
+listOfTimers = timerfindall;
+if ~isempty(listOfTimers)
+delete(listOfTimers(:));
+end
+clear all
+
+global listenerStatus;
+global eTrackGlobal;
+
+
+% initial setup
+eTrackGlobal.tic = tic;
+eTrackGlobal.camsTriggered  = false;
+
+allcams = webcamlist;
+disp('Starting cameras...')
+% setup eye track camera 1
+eTrackGlobal.cam1 = webcam(1);
+% setup eye track camera2
+eTrackGlobal.cam2 = webcam(2);
+% setup behavioural camera
+eTrackGlobal.cam3 = webcam(3);
+
+% setup arduino
+disp('Starting arduino...')
+eTrackGlobal.arduino = arduino('COM4');
+
+% setup UDP listener
+disp('Starting UDP listener...')
+listenerStatus.udpSI = UDPqML('10.40.6.198',1814,1813);
+listenerStatus.status = 'idle';
+listenerStatus.udpCheckTimer = timer('StartDelay',0,'Period',1,'BusyMode','drop','TimerFcn',@UDP_handler1,'ExecutionMode','fixedRate');
+start(listenerStatus.udpCheckTimer);
+
+% figure window for display
+fig = figure('Units','normalized','Position',[0.33 0.05 0.33 0.9],'Name','Video acquisition','NumberTitle','off');
+set(fig, 'MenuBar', 'none');
+set(fig, 'ToolBar', 'none');
+listenerStatus.status = 'idle';
+
+% testing:
+% t1 = timer('StartDelay',2,'Period',1,'BusyMode','drop','TimerFcn',@testVideo,'ExecutionMode','singleShot');
+% t2 = timer('StartDelay',12,'Period',1,'BusyMode','drop','TimerFcn',@testVideo,'ExecutionMode','singleShot');
+% start(t1);
+% start(t2);
+
+%setup images for video preview
+
+a = tight_subplot(3,1,0.01);
+%axis equal;
+axis(a(1));
+eTrackGlobal.hImage1 = image(a(1),zeros(size(snapshot(eTrackGlobal.cam1))));
+axis(a(2));
+%axis equal;
+eTrackGlobal.hImage2 = image(a(2),zeros(size(snapshot(eTrackGlobal.cam2))));
+axis(a(3));
+%axis equal;
+eTrackGlobal.hImage3 = image(a(3),zeros(size(snapshot(eTrackGlobal.cam3))));
+
+eTrackGlobal.cam1.preview(eTrackGlobal.hImage1);
+eTrackGlobal.cam2.preview(eTrackGlobal.hImage2);
+eTrackGlobal.cam3.preview(eTrackGlobal.hImage3);
+ 
+set(groot,'CurrentFigure',fig);
+axes(a(1));
+statusText = text(20,20,'IDLE','Color','green','FontSize',20);
+axes(a(1));
+statusText2 = text(20,80,'','Color','yellow','FontSize',20);
+
+while true
+    
+    % grab latest camera data
+    data1 = snapshot(eTrackGlobal.cam1);
+    data2 = snapshot(eTrackGlobal.cam2);
+    data3 = snapshot(eTrackGlobal.cam3);
+    data1 = squeeze(data1(:,:,1));
+    data2 = squeeze(data2(:,:,1));
+    data3 = squeeze(data3(:,:,1));
+    % concatinate
+    xMax = max([size(data1,2),size(data2,2),size(data3,2)]);
+    yMax = max([size(data1,1),size(data2,1),size(data3,1)]);
+    % pad each
+    data1 = cat(2,data1,zeros([size(data1,1),xMax-size(data1,2)]));
+    data1 = cat(1,data1,zeros([yMax-size(data1,1),size(data1,2),]));
+    data2 = cat(2,data2,zeros([size(data2,1),xMax-size(data2,2)]));
+    data2 = cat(1,data2,zeros([yMax-size(data2,1),size(data2,2),]));
+    data3 = cat(2,data3,zeros([size(data3,1),xMax-size(data3,2)]));
+    data3 = cat(1,data3,zeros([yMax-size(data3,1),size(data3,2),]));
+    % data 0 contains the final thing to be output
+    data0 = cat(2,data1,data2,data3);
+    % update display
+    try
+    set(groot,'CurrentFigure',fig);
+    catch
+        break
+    end
+
+    if strcmp(listenerStatus.status,'idle')
+        drawnow;
+    end
+    
+    %% do stuff relate3d to writing video to disk
+    % check if new acquistion has been requested
+    % check if a new recording session has been requested
+    if  strcmp(listenerStatus.status,'start')
+        
+        % clear current eyetracking data
+        disp('Starting new eyetracking acquisition');
+%         eTrackGlobal.data.frames{1} = zeros([size(data1),50000],'uint8');
+%         eTrackGlobal.data.frames{2} = zeros([size(data2),50000],'uint8');
+%         eTrackGlobal.data.frames{3} = zeros([size(data3),50000],'uint8');
+
+%         eTrackGlobal.cam1.closePreview;
+%         eTrackGlobal.cam2.closePreview;
+%         eTrackGlobal.cam3.closePreview;
+        
+        eTrackGlobal.writerObj{1} = VideoWriter(listenerStatus.filename1,'MPEG-4');
+        %eTrackGlobal.writerObj{2} = VideoWriter(listenerStatus.filename2,'MPEG-4');
+        %eTrackGlobal.writerObj{3} = VideoWriter(listenerStatus.filename3,'MPEG-4');
+        
+        eTrackGlobal.data.frameTimes=[];
+        eTrackGlobal.data.frameCount = 0;
+        eTrackGlobal.data.startTime = toc(eTrackGlobal.tic);
+        eTrackGlobal.data.lastTrig = 1;
+        %eTrackGlobal.arduino.digitalWrite(8,1);
+        eTrackGlobal.arduino.writeDigitalPin('D8',1);
+        
+        open(eTrackGlobal.writerObj{1});
+        %open(eTrackGlobal.writerObj{2});
+        %open(eTrackGlobal.writerObj{3});
+        
+        listenerStatus.status = 'acquiring';
+        statusText2.String = strrep(listenerStatus.expID, '_', '\_');
+    end
+    
+    %% check if abort acquisition has been requested
+    if  strcmp(listenerStatus.status,'aborting')
+        statusText.String = 'ABORTING';
+        statusText.Color = 'red';
+        disp('Stopping acquisition');
+        eTrackGlobal.data.lastTrig = 0;
+        eTrackGlobal.arduino.writeDigitalPin('D8',0);
+        % then close frames output writer
+        %eTrackGlobal.writerObj{1}.  
+        drawnow
+
+        eTrackGlobal.writerObj{1}.close;
+        % save the rest of the meta data
+        eTrackGlobal.data.frames = [];
+        statusText.String = 'SAVING META DATA';
+        drawnow;
+        eTrackData = eTrackGlobal.data;
+        save(listenerStatus.filenameMeta1,'eTrackData');
+
+        % sync to server
+        %remotePath = '\\ar-lab-nas1\dataserver\Remote_Repository';
+        %localPath = 'c:\local_repository\*.*';
+        %statusText.String = 'SYNCING TO SERVER';
+        %drawnow;
+        %tic
+        %copyfile(localPath,remotePath);
+        %disp(['Time to sync = ',num2str(toc)]);
+        listenerStatus.status = 'idle';
+        statusText.String = 'IDLE';
+        statusText.Color = 'green';
+        
+        disp('Data saved.');
+        % figure;
+        % plot(diff(eTrackGlobal.data.frameTimes));
+        disp(['Median frame rate = ',num2str(1/median(diff(eTrackGlobal.data.frameTimes)))]);
+        %stop(eTrackGlobal.timer);
+    end
+    
+    %% check if acquiring
+    if  strcmp(listenerStatus.status,'acquiring')
+        statusText.String = 'ACQUIRING';
+        statusText.Color = 'red';
+        eTrackGlobal.data.frameCount = eTrackGlobal.data.frameCount + 1;
+        eTrackGlobal.data.frameTimes(eTrackGlobal.data.frameCount) = toc(eTrackGlobal.tic) - eTrackGlobal.data.startTime;
+        
+        if length(eTrackGlobal.data.frameTimes)>1
+        if eTrackGlobal.data.frameTimes(end)-eTrackGlobal.data.frameTimes(end-1)<0
+            disp('Err');
+        end
+        end
+        
+        % if frame count is a multiple of 20 then output a timing pulse
+        if rem(eTrackGlobal.data.frameCount,100)==0
+            
+            if eTrackGlobal.data.lastTrig == 1
+                eTrackGlobal.data.lastTrig = 0;
+                eTrackGlobal.arduino.writeDigitalPin('D8',0);
+            else
+                eTrackGlobal.data.lastTrig = 1;
+                eTrackGlobal.arduino.writeDigitalPin('D8',1);
+            end
+
+        end
+        
+        % write frame to disk
+        writeVideo(eTrackGlobal.writerObj{1},data0);
+    end
+end
+
+end
+
+
+##### SOURCE END #####
+--></body></html>

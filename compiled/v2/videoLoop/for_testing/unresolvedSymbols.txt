@@ -1,0 +1,6 @@
+Path	Symbol	Reason
+toolbox\matlab\hardware\shared\sensors\+matlabshared\+sensors\+simulink\+internal\getTargetHardwareName.m	codertarget.targethardware.getTargetHardware	undeployable
+toolbox\matlab\hardware\shared\sensors\+matlabshared\+sensors\+simulink\+internal\getTargetSpecificFileLocationForSensors.m	codertarget.data.getData	undeployable
+toolbox\matlab\hardware\supportpackages\arduinoio\+arduinoio\+internal\getDocMap.m	matlabshared.supportpkg.getSupportPackageRoot	undeployable
+toolbox\matlab\hardware\supportpackages\sharedarduino\+arduinoio\preUninstall.m	matlabshared.supportpkg.getInstalled	undeployable
+toolbox\matlab\hardware\supportpackages\sharedarduino\+arduinoio\preUninstall.m	matlabshared.supportpkg.getSupportPackageRoot	undeployable
