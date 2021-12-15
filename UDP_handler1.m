@@ -2,6 +2,7 @@ function UDP_handler1(varargin)
 % parse UDP message
 % take action depending upon first 4 letters of UDP
 % Handler for acquiring eyetracking data
+
 global listenerStatus;
 global eTrackGlobal;
 localPath = 'c:\local_repository';

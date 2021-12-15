@@ -11,7 +11,6 @@ clear all
 global listenerStatus;
 global eTrackGlobal;
 
-
 % initial setup
 eTrackGlobal.tic = tic;
 eTrackGlobal.camsTriggered  = false;
@@ -28,6 +27,7 @@ eTrackGlobal.cam3 = webcam(3);
 % setup arduino
 disp('Starting arduino...')
 eTrackGlobal.arduino = arduino('COM4');
+eTrackGlobal.arduino.writeDigitalPin('D8',0);
 
 % setup UDP listener
 disp('Starting UDP listener...')
@@ -124,6 +124,8 @@ while true
         
         eTrackGlobal.data.frameTimes=[];
         eTrackGlobal.data.frameCount = 0;
+        eTrackGlobal.data.posPulseTimes = [];
+        eTrackGlobal.data.negPulseTimes = [];
         eTrackGlobal.data.startTime = toc(eTrackGlobal.tic);
         eTrackGlobal.data.lastTrig = 1;
         %eTrackGlobal.arduino.digitalWrite(8,1);
@@ -188,15 +190,17 @@ while true
         end
         end
         
-        % if frame count is a multiple of 20 then output a timing pulse
+        % if frame count is a multiple of 100 then output a timing pulse
         if rem(eTrackGlobal.data.frameCount,100)==0
             
             if eTrackGlobal.data.lastTrig == 1
                 eTrackGlobal.data.lastTrig = 0;
                 eTrackGlobal.arduino.writeDigitalPin('D8',0);
+                eTrackGlobal.data.negPulseTimes = [eTrackGlobal.data.negPulseTimes,eTrackGlobal.data.frameTimes(end)];
             else
                 eTrackGlobal.data.lastTrig = 1;
                 eTrackGlobal.arduino.writeDigitalPin('D8',1);
+                eTrackGlobal.data.posPulseTimes = [eTrackGlobal.data.posPulseTimes,eTrackGlobal.data.frameTimes(end)];
             end
 
         end
